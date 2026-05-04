@@ -88,6 +88,24 @@ The visitor demo pass can be reset with:
 /demo_reset_visitor
 ```
 
+## Telegram webhook setup
+
+After `PUBLIC_BASE_URL` points to an HTTPS URL and `.env` contains
+`TELEGRAM_BOT_TOKEN`, run:
+
+```bash
+npm run telegram:configure
+```
+
+This configures bot commands, the QR menu button, and the production webhook
+with `X-Telegram-Bot-Api-Secret-Token`.
+
+To remove the webhook:
+
+```bash
+npm run telegram:delete-webhook
+```
+
 ## Suggested next milestone
 
 - Implement visitor pass creation and binding flows
