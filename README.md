@@ -115,16 +115,30 @@ Telegram:
 .\scripts\start-demo.ps1 -ConfigureTelegram
 ```
 
+If PowerShell blocks local scripts, run them through a process-level bypass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1 -ConfigureTelegram
+```
+
 Check status:
 
 ```powershell
 .\scripts\status-demo.ps1
 ```
 
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\status-demo.ps1
+```
+
 Stop backend and ngrok:
 
 ```powershell
 .\scripts\stop-demo.ps1
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop-demo.ps1
 ```
 
 ## Suggested next milestone
