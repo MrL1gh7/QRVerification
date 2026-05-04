@@ -30,6 +30,10 @@ await callTelegramApi('setMyCommands', {
       description: 'Open QR scanner'
     },
     {
+      command: 'audit',
+      description: 'Open access logs'
+    },
+    {
       command: 'status',
       description: 'Show current access role'
     },

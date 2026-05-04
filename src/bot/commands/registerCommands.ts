@@ -38,6 +38,7 @@ export function registerCommands(
         '/status',
         '/my_qr',
         '/scan',
+        '/audit',
         '/demo_role operator|admin|employee|employee2|visitor|staff',
         '/demo_links',
         '/demo_reset_visitor'
@@ -81,6 +82,17 @@ export function registerCommands(
     );
 
     await ctx.reply('Open the scanner web app.', {
+      reply_markup: keyboard
+    });
+  });
+
+  bot.command('audit', async (ctx) => {
+    const keyboard = new InlineKeyboard().webApp(
+      'Open logs',
+      `${env.PUBLIC_BASE_URL}/app/audit`
+    );
+
+    await ctx.reply('Open access logs.', {
       reply_markup: keyboard
     });
   });

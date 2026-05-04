@@ -88,6 +88,18 @@ The visitor demo pass can be reset with:
 /demo_reset_visitor
 ```
 
+Access logs are available in Telegram through:
+
+```text
+/audit
+```
+
+Or directly in the browser:
+
+```text
+https://<public-url>/app/audit
+```
+
 ## Telegram webhook setup
 
 After `PUBLIC_BASE_URL` points to an HTTPS URL and `.env` contains

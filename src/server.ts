@@ -29,6 +29,7 @@ async function main() {
     accessScannerService: new PolicyAccessScannerService(accessStore, qrTokenService),
     resolveActorSubject: (telegramUserId) =>
       accessStore.findSubjectByTelegramUserId(telegramUserId),
+    listAccessEvents: (limit) => accessStore.listAccessEvents(limit),
     telegramUpdateHandler: async (update) => {
       if (!bot) {
         logger.warn({ updateId: update.update_id }, 'Bot token is missing, update ignored');

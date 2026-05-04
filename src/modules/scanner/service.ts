@@ -55,24 +55,43 @@ export class PolicyAccessScannerService implements AccessScannerService {
 
   async scan(input: ScanRequest, context: ScanContext = {}): Promise<ScanResponse> {
     const accessPoint = this.store.getAccessPointForScanner(input.scanner_id);
+    const record = (response: ScanResponse) => {
+      this.store.appendAccessEvent({
+        requestId: input.request_id,
+        scannerId: input.scanner_id,
+        accessPointId: accessPoint?.id,
+        accessPointLabel: response.access_point?.label ?? accessPoint?.label,
+        subjectName: response.subject?.full_name,
+        subjectKind: response.subject?.kind as never,
+        tenantName: response.subject?.tenant_name,
+        direction: response.direction,
+        decision: response.decision,
+        reasonCode: response.reason_code,
+        displayMessage: response.display_message
+      });
+
+      return response;
+    };
 
     if (!accessPoint) {
-      return deny('enter', 'unknown_scanner', 'Scanner is unknown or disabled');
+      return record(deny('enter', 'unknown_scanner', 'Scanner is unknown or disabled'));
     }
 
     if (!context.scannerAuthenticated && !context.actorSubject?.canScan) {
-      return deny(
-        directionForAccessPoint(accessPoint),
-        'scanner_not_allowed',
-        'This Telegram account cannot scan access QR codes',
-        accessPoint
+      return record(
+        deny(
+          directionForAccessPoint(accessPoint),
+          'scanner_not_allowed',
+          'This Telegram account cannot scan access QR codes',
+          accessPoint
+        )
       );
     }
 
     const verifiedToken = await this.verifyToken(input.token, accessPoint);
 
     if ('decision' in verifiedToken) {
-      return verifiedToken;
+      return record(verifiedToken);
     }
 
     if (
@@ -81,30 +100,34 @@ export class PolicyAccessScannerService implements AccessScannerService {
         verifiedToken.expiresAtEpochSeconds
       )
     ) {
-      return deny(
-        directionForAccessPoint(accessPoint),
-        'replay_detected',
-        'QR token was already used',
-        accessPoint
+      return record(
+        deny(
+          directionForAccessPoint(accessPoint),
+          'replay_detected',
+          'QR token was already used',
+          accessPoint
+        )
       );
     }
 
     if (verifiedToken.subjectKind === 'visitor') {
-      return this.scanVisitor(verifiedToken, accessPoint);
+      return record(this.scanVisitor(verifiedToken, accessPoint));
     }
 
     const subject = this.store.findSubjectForTokenSubject(verifiedToken.subject);
 
     if (!subject) {
-      return deny(
-        directionForAccessPoint(accessPoint),
-        'subject_not_found',
-        'Access subject was not found',
-        accessPoint
+      return record(
+        deny(
+          directionForAccessPoint(accessPoint),
+          'subject_not_found',
+          'Access subject was not found',
+          accessPoint
+        )
       );
     }
 
-    return this.scanSubject(subject, verifiedToken, accessPoint);
+    return record(this.scanSubject(subject, verifiedToken, accessPoint));
   }
 
   private async verifyToken(token: string, accessPoint: AccessPoint) {

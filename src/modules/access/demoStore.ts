@@ -1,4 +1,5 @@
 import type {
+  AccessEventLogEntry,
   AccessPoint,
   AccessPointClass,
   AccessSubject,
@@ -21,6 +22,7 @@ export class InMemoryAccessStore {
   private readonly scanners = new Map<string, Scanner>();
   private readonly telegramLinks = new Map<string, TelegramLink>();
   private readonly consumedJtis = new Map<string, number>();
+  private readonly accessEvents: AccessEventLogEntry[] = [];
 
   constructor() {
     this.seedDemoData();
@@ -138,6 +140,25 @@ export class InMemoryAccessStore {
     pass.status = 'scheduled';
     pass.windowStart = hoursFromNow(-1);
     pass.windowEnd = hoursFromNow(8);
+  }
+
+  appendAccessEvent(
+    event: Omit<AccessEventLogEntry, 'id' | 'occurredAt'>
+  ): AccessEventLogEntry {
+    const entry: AccessEventLogEntry = {
+      id: `evt_${this.accessEvents.length + 1}`,
+      occurredAt: new Date(),
+      ...event
+    };
+
+    this.accessEvents.unshift(entry);
+    this.accessEvents.splice(100);
+
+    return entry;
+  }
+
+  listAccessEvents(limit = 50) {
+    return this.accessEvents.slice(0, limit);
   }
 
   private evictExpiredJtis() {

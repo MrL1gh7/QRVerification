@@ -22,6 +22,8 @@ import {
   type ProcessedUpdatesStore
 } from './infra/telegram/processedUpdatesStore.js';
 import type { AccessSubject } from './modules/access/types.js';
+import type { AccessEventLogEntry } from './modules/access/types.js';
+import { accessEventLogResponseSchema } from './modules/access/schemas.js';
 import {
   getTelegramInitDataFromHeaders,
   verifyTelegramWebAppInitData
@@ -56,6 +58,7 @@ export interface BuildAppOptions {
   currentQrService?: CurrentQrService;
   telegramUpdateHandler?: TelegramUpdateHandler;
   resolveActorSubject?: (telegramUserId: string) => AccessSubject | undefined;
+  listAccessEvents?: (limit?: number) => AccessEventLogEntry[];
 }
 
 const currentFilePath = fileURLToPath(import.meta.url);
@@ -67,6 +70,9 @@ const currentQrQuerySchema = z.object({
 });
 const qrSvgQuerySchema = z.object({
   token: z.string().min(1)
+});
+const accessEventsQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50)
 });
 
 function getHeaderValue(header: string | string[] | undefined) {
@@ -120,6 +126,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     options.accessScannerService ?? new ScaffoldAccessScannerService();
   const currentQrService = options.currentQrService ?? new ScaffoldCurrentQrService();
   const resolveActorSubject = options.resolveActorSubject ?? (() => undefined);
+  const listAccessEvents = options.listAccessEvents ?? (() => []);
   const telegramUpdateHandler =
     options.telegramUpdateHandler ??
     (async () => {
@@ -198,6 +205,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   app.get('/app/scanner', async (_request, reply) => {
     return reply.type('text/html').sendFile('scanner-app/index.html');
+  });
+
+  app.get('/app/audit', async (_request, reply) => {
+    return reply.type('text/html').sendFile('audit-app/index.html');
   });
 
   app.get(
@@ -369,6 +380,29 @@ export async function buildApp(options: BuildAppOptions = {}) {
       return scanResponseSchema.parse(decision);
     }
   );
+
+  app.get('/api/v1/access/events', async (request) => {
+    const query = accessEventsQuerySchema.parse(request.query);
+    const events = listAccessEvents(query.limit).map((event) => ({
+      id: event.id,
+      occurred_at: event.occurredAt.toISOString(),
+      request_id: event.requestId,
+      scanner_id: event.scannerId,
+      access_point_id: event.accessPointId,
+      access_point_label: event.accessPointLabel,
+      subject_name: event.subjectName,
+      subject_kind: event.subjectKind,
+      tenant_name: event.tenantName,
+      direction: event.direction,
+      decision: event.decision,
+      reason_code: event.reasonCode,
+      display_message: event.displayMessage
+    }));
+
+    return accessEventLogResponseSchema.parse({
+      events
+    });
+  });
 
   return app;
 }

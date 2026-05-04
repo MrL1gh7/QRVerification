@@ -66,3 +66,20 @@ export interface TelegramLink {
   subjectId: string;
   linkedAt: Date;
 }
+
+export interface AccessEventLogEntry {
+  id: string;
+  occurredAt: Date;
+  requestId: string;
+  scannerId: string;
+  accessPointId?: string;
+  accessPointLabel?: string;
+  subjectId?: string;
+  subjectName?: string;
+  subjectKind?: SubjectKind;
+  tenantName?: string;
+  direction: AccessStep;
+  decision: 'allow' | 'deny';
+  reasonCode: string;
+  displayMessage: string;
+}
