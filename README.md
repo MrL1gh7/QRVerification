@@ -106,6 +106,27 @@ To remove the webhook:
 npm run telegram:delete-webhook
 ```
 
+## Demo process control
+
+Start backend and ngrok, update `PUBLIC_BASE_URL`, and optionally configure
+Telegram:
+
+```powershell
+.\scripts\start-demo.ps1 -ConfigureTelegram
+```
+
+Check status:
+
+```powershell
+.\scripts\status-demo.ps1
+```
+
+Stop backend and ngrok:
+
+```powershell
+.\scripts\stop-demo.ps1
+```
+
 ## Suggested next milestone
 
 - Implement visitor pass creation and binding flows

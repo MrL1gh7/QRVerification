@@ -17,6 +17,10 @@ async function main() {
   const qrTokenService = new QrTokenService(env);
   const bot = createBot(env, accessStore);
 
+  if (bot) {
+    await bot.init();
+  }
+
   const app = await buildApp({
     env,
     metrics,
