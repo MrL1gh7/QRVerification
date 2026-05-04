@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BuildingStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TenantStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserKind {
+  EMPLOYEE
+  VISITOR
+  INTERNAL_STAFF
+  OPERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  REVOKED
+}
+
+enum OfficeAssignmentStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum QRMode {
+  DYNAMIC
+  VISITOR_WINDOW
+}
+
+enum VisitorPassStatus {
+  SCHEDULED
+  ENTERED
+  EXITED
+  EXPIRED
+  REVOKED
+  CANCELLED
+}
+
+enum AccessPointClass {
+  MAIN_ENTRY
+  LIFT
+  STAIR_LANDING
+  EXIT
+}
+
+enum DirectionMode {
+  IN
+  OUT
+  AUTO
+}
+
+enum AccessDirection {
+  ENTER
+  EXIT
+  MOVE
+}
+
+enum AccessDecision {
+  ALLOW
+  DENY
+}
+
+enum ScannerStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum BindPurpose {
+  BIND_EMPLOYEE
+  BIND_VISITOR
+}
+
+model Building {
+  id             String          @id @default(cuid())
+  name           String
+  timezone       String
+  status         BuildingStatus  @default(ACTIVE)
+  floors         Floor[]
+  offices        Office[]
+  accessPoints   AccessPoint[]
+  accessProfiles AccessProfile[]
+  visitorPasses  VisitorPass[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Floor {
+  id          String        @id @default(cuid())
+  buildingId  String
+  number      Int
+  name        String
+  building    Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  offices     Office[]
+  accessPoints AccessPoint[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([buildingId, number])
+}
+
+model Office {
+  id            String   @id @default(cuid())
+  buildingId    String
+  floorId       String
+  officeNumber  String
+  tenantId      String?
+  status        String   @default("ACTIVE")
+  building      Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor         Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  assignments   OfficeAssignment[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([buildingId, officeNumber])
+}
+
+model Tenant {
+  id              String             @id @default(cuid())
+  legalName       String
+  displayName     String
+  status          TenantStatus       @default(ACTIVE)
+  offices         Office[]
+  tenantAdmins    TenantAdmin[]
+  officeAssignments OfficeAssignment[]
+  visitorPasses   VisitorPass[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model User {
+  id                  String             @id @default(cuid())
+  kind                UserKind
+  fullName            String
+  jobTitle            String?
+  phone               String?
+  email               String?
+  status              UserStatus         @default(ACTIVE)
+  telegramAccounts    TelegramAccount[]
+  tenantAdminRoles    TenantAdmin[]
+  officeAssignments   OfficeAssignment[]
+  accessProfiles      AccessProfile[]
+  hostedVisitorPasses VisitorPass[]      @relation("HostedVisitorPasses")
+  visitorPasses       VisitorPass[]      @relation("VisitorUserPasses")
+  bindCodes           BindCode[]         @relation("BindCodeTargets")
+  accessEvents        AccessEvent[]
+  auditLogs           AuditLog[]         @relation("AuditActors")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model TelegramAccount {
+  id             String   @id @default(cuid())
+  userId         String
+  telegramUserId BigInt   @unique
+  username       String?
+  firstName      String?
+  languageCode   String?
+  linkedAt       DateTime @default(now())
+  lastSeenAt     DateTime?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TenantAdmin {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  isPrimary  Boolean  @default(false)
+  status     String   @default("ACTIVE")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+}
+
+model OfficeAssignment {
+  id        String                 @id @default(cuid())
+  userId    String
+  tenantId  String
+  officeId  String
+  floorId   String
+  status    OfficeAssignmentStatus @default(ACTIVE)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  office    Office                 @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+}
+
+model AccessProfile {
+  id                         String            @id @default(cuid())
+  userId                     String
+  buildingId                 String
+  allowedFloorIds            String[]
+  allowedAccessPointClasses  AccessPointClass[]
+  scheduleJson               Json?
+  qrMode                     QRMode
+  user                       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  building                   Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+
+  @@unique([userId, buildingId])
+}
+
+model VisitorPass {
+  id            String            @id @default(cuid())
+  tenantId      String
+  hostUserId    String
+  visitorUserId String?
+  buildingId    String
+  floorId       String
+  windowStart   DateTime
+  windowEnd     DateTime
+  status        VisitorPassStatus @default(SCHEDULED)
+  createdBy     String
+  notes         String?
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hostUser      User              @relation("HostedVisitorPasses", fields: [hostUserId], references: [id], onDelete: Cascade)
+  visitorUser   User?             @relation("VisitorUserPasses", fields: [visitorUserId], references: [id], onDelete: SetNull)
+  building      Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  accessEvents  AccessEvent[]
+  bindCodes     BindCode[]        @relation("PassBindCodes")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model BindCode {
+  id            String      @id @default(cuid())
+  purpose       BindPurpose
+  targetUserId  String?
+  targetPassId  String?
+  code          String      @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdBy     String
+  targetUser    User?       @relation("BindCodeTargets", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetPass    VisitorPass? @relation("PassBindCodes", fields: [targetPassId], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+}
+
+model AccessPoint {
+  id            String           @id @default(cuid())
+  buildingId    String
+  floorId       String?
+  name          String
+  class         AccessPointClass
+  directionMode DirectionMode
+  building      Building         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor         Floor?           @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  scanners      Scanner[]
+  accessEvents  AccessEvent[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Scanner {
+  id            String        @id @default(cuid())
+  accessPointId String
+  name          String
+  authKeyHash   String
+  status        ScannerStatus @default(ACTIVE)
+  accessPoint   AccessPoint   @relation(fields: [accessPointId], references: [id], onDelete: Cascade)
+  accessEvents  AccessEvent[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model AccessEvent {
+  id             String          @id @default(cuid())
+  occurredAt     DateTime        @default(now())
+  accessPointId  String
+  scannerId      String?
+  userId         String?
+  visitorPassId  String?
+  direction      AccessDirection
+  decision       AccessDecision
+  reasonCode     String
+  tokenJti       String?
+  requestId      String
+  accessPoint    AccessPoint     @relation(fields: [accessPointId], references: [id], onDelete: Cascade)
+  scanner        Scanner?        @relation(fields: [scannerId], references: [id], onDelete: SetNull)
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorPass    VisitorPass?    @relation(fields: [visitorPassId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, accessPointId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String
+  payloadJson Json?
+  createdAt   DateTime @default(now())
+  actorUser   User?    @relation("AuditActors", fields: [actorUserId], references: [id], onDelete: SetNull)
+}

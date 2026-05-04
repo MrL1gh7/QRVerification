@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QR Access</title>
+    <link rel="stylesheet" href="/qr-app/styles.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="/qr-app/app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="identity">
+        <div>
+          <p class="label">Пропуск</p>
+          <h1 id="fullName">Загрузка</h1>
+          <p id="roleLine">Проверяем доступ</p>
+        </div>
+        <div class="status" id="step">...</div>
+      </section>
+
+      <section class="qr-panel" aria-live="polite">
+        <div class="qr-box" id="qrBox">
+          <span>QR</span>
+        </div>
+        <div class="timer">
+          <span>Обновление</span>
+          <strong id="timer">...</strong>
+        </div>
+      </section>
+
+      <section class="details">
+        <div>
+          <span>Компания</span>
+          <strong id="tenantName">...</strong>
+        </div>
+        <div>
+          <span>Этажи</span>
+          <strong id="floors">...</strong>
+        </div>
+        <div>
+          <span>Статус</span>
+          <strong id="status">...</strong>
+        </div>
+      </section>
+
+      <section class="demo-switcher" id="demoSwitcher">
+        <label for="demoSubject">Демо-профиль</label>
+        <select id="demoSubject">
+          <option value="">Текущий Telegram-профиль</option>
+          <option value="demo_operator">Оператор</option>
+          <option value="demo_tenant_admin">Администратор арендатора</option>
+          <option value="demo_employee_f3">Сотрудник, этаж 3</option>
+          <option value="demo_employee_f2">Сотрудник, этаж 2</option>
+          <option value="demo_visitor">Посетитель, этаж 3</option>
+          <option value="demo_staff">Внутренний персонал</option>
+        </select>
+      </section>
+
+      <p class="message" id="message"></p>
+    </main>
+  </body>
+</html>

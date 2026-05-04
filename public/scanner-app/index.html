@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QR Scanner</title>
+    <link rel="stylesheet" href="/scanner-app/styles.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="/scanner-app/app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="toolbar">
+        <label for="scannerId">Точка доступа</label>
+        <select id="scannerId">
+          <option value="scn_main_entry">Главный вход</option>
+          <option value="scn_exit">Выход</option>
+          <option value="scn_lift_f2">Лифт, этаж 2</option>
+          <option value="scn_lift_f3">Лифт, этаж 3</option>
+          <option value="scn_stair_f3">Лестница, этаж 3</option>
+        </select>
+      </section>
+
+      <section class="camera">
+        <video id="video" muted playsinline></video>
+        <div class="camera-state" id="cameraState">Запуск камеры</div>
+      </section>
+
+      <section class="manual">
+        <textarea id="manualToken" rows="3" placeholder="tgac:v1:..."></textarea>
+        <button id="submitManual" type="button">Проверить</button>
+      </section>
+
+      <section class="result" id="result">
+        <p class="decision" id="decision">Готово к сканированию</p>
+        <p id="reason">Поднесите QR к камере.</p>
+      </section>
+    </main>
+  </body>
+</html>
