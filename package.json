@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test tests/unit/**/*.test.ts tests/integration/**/*.test.ts",
+    "test": "node --experimental-test-isolation=none --import tsx --test tests/unit/**/*.test.ts tests/integration/**/*.test.ts",
     "test:e2e": "playwright test",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

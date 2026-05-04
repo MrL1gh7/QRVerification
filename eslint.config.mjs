@@ -14,5 +14,26 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-misused-promises": "off"
     }
+  },
+  {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      globals: {
+        BarcodeDetector: "readonly",
+        Image: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        clearInterval: "readonly",
+        clearTimeout: "readonly",
+        crypto: "readonly",
+        document: "readonly",
+        fetch: "readonly",
+        navigator: "readonly",
+        requestAnimationFrame: "readonly",
+        setInterval: "readonly",
+        setTimeout: "readonly",
+        window: "readonly"
+      }
+    }
   }
 );

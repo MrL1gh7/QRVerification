@@ -58,6 +58,14 @@ npm run test
 npm run test:e2e
 ```
 
+On this Windows workspace a portable Node.js runtime can live under `.tools/`.
+If global `npm` is not available, run commands through:
+
+```powershell
+$env:Path=(Resolve-Path '.tools\node-v22.14.0-win-x64').Path + ';' + $env:Path
+.tools\node-v22.14.0-win-x64\npm.cmd run test
+```
+
 ## Telegram demo flow
 
 In Telegram, open the bot and run:
