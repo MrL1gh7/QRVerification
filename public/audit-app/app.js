@@ -11,9 +11,7 @@ setInterval(loadEvents, 5_000);
 
 async function loadEvents() {
   const response = await fetch('/api/v1/access/events?limit=50', {
-    headers: {
-      accept: 'application/json'
-    }
+    headers: authHeaders()
   });
   const payload = await response.json();
 
@@ -28,6 +26,18 @@ async function loadEvents() {
   }
 
   eventsEl.replaceChildren(...payload.events.map(renderEvent));
+}
+
+function authHeaders() {
+  const headers = {
+    accept: 'application/json'
+  };
+
+  if (tg?.initData) {
+    headers.authorization = `tma ${tg.initData}`;
+  }
+
+  return headers;
 }
 
 function renderEvent(event) {
@@ -56,10 +66,10 @@ function renderEvent(event) {
   const meta = document.createElement('div');
   meta.className = 'meta';
   meta.append(
-    chip(event.direction),
+    chip(directionLabel(event.direction)),
     chip(event.access_point_label || event.scanner_id),
-    chip(event.subject_name || 'Без субъекта'),
-    chip(event.subject_kind || 'unknown')
+    chip(event.subject_name || 'Без пользователя'),
+    chip(roleLabel(event.subject_kind || 'unknown'))
   );
 
   const reason = document.createElement('div');
@@ -76,4 +86,28 @@ function chip(text) {
   const span = document.createElement('span');
   span.textContent = text;
   return span;
+}
+
+function directionLabel(direction) {
+  return (
+    {
+      enter: 'вход',
+      exit: 'выход',
+      move: 'доступ'
+    }[direction] || direction
+  );
+}
+
+function roleLabel(role) {
+  return (
+    {
+      operator: 'администратор',
+      tenant_admin: 'админ арендатора',
+      employee: 'сотрудник',
+      visitor: 'посетитель',
+      internal_staff: 'персонал',
+      guard: 'охранник',
+      unknown: 'неизвестно'
+    }[role] || role
+  );
 }

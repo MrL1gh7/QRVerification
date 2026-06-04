@@ -20,7 +20,7 @@ export class ScaffoldAccessScannerService implements AccessScannerService {
         direction: 'enter',
         reason_code: 'invalid_token_prefix',
         next_subject_state: 'unknown',
-        display_message: 'Invalid QR token format'
+        display_message: 'Неверный формат QR-кода'
       };
     }
 
@@ -33,7 +33,7 @@ export class ScaffoldAccessScannerService implements AccessScannerService {
         direction: 'enter',
         reason_code: 'invalid_compact_jws',
         next_subject_state: 'unknown',
-        display_message: 'Compact JWS payload is malformed'
+        display_message: 'QR-код повреждён'
       };
     }
 
@@ -42,7 +42,7 @@ export class ScaffoldAccessScannerService implements AccessScannerService {
       direction: 'enter',
       reason_code: 'verification_not_configured',
       next_subject_state: 'unknown',
-      display_message: 'Scanner scaffold is online, verification is not configured yet'
+      display_message: 'Сканер работает, но проверка ещё не настроена'
     };
   }
 }
@@ -61,8 +61,9 @@ export class PolicyAccessScannerService implements AccessScannerService {
         scannerId: input.scanner_id,
         accessPointId: accessPoint?.id,
         accessPointLabel: response.access_point?.label ?? accessPoint?.label,
+        subjectId: response.subject?.id,
         subjectName: response.subject?.full_name,
-        subjectKind: response.subject?.kind as never,
+        subjectKind: response.subject?.kind as AccessSubject['kind'] | undefined,
         tenantName: response.subject?.tenant_name,
         direction: response.direction,
         decision: response.decision,
@@ -74,7 +75,7 @@ export class PolicyAccessScannerService implements AccessScannerService {
     };
 
     if (!accessPoint) {
-      return record(deny('enter', 'unknown_scanner', 'Scanner is unknown or disabled'));
+      return record(deny('enter', 'unknown_scanner', 'Сканер неизвестен или отключён'));
     }
 
     if (!context.scannerAuthenticated && !context.actorSubject?.canScan) {
@@ -82,7 +83,7 @@ export class PolicyAccessScannerService implements AccessScannerService {
         deny(
           directionForAccessPoint(accessPoint),
           'scanner_not_allowed',
-          'This Telegram account cannot scan access QR codes',
+          'Этот Telegram-аккаунт не может сканировать QR-коды',
           accessPoint
         )
       );
@@ -94,17 +95,26 @@ export class PolicyAccessScannerService implements AccessScannerService {
       return record(verifiedToken);
     }
 
+    if (verifiedToken.tokenUse === 'static_visitor' && verifiedToken.subjectKind !== 'visitor') {
+      return record(
+        deny(
+          directionForAccessPoint(accessPoint),
+          'invalid_static_visitor_token',
+          'Статичный гостевой QR некорректен',
+          accessPoint
+        )
+      );
+    }
+
     if (
-      !this.store.consumeJti(
-        verifiedToken.jti,
-        verifiedToken.expiresAtEpochSeconds
-      )
+      verifiedToken.tokenUse !== 'static_visitor' &&
+      !this.store.consumeJti(verifiedToken.jti, verifiedToken.expiresAtEpochSeconds)
     ) {
       return record(
         deny(
           directionForAccessPoint(accessPoint),
           'replay_detected',
-          'QR token was already used',
+          'QR-код уже был использован',
           accessPoint
         )
       );
@@ -121,8 +131,23 @@ export class PolicyAccessScannerService implements AccessScannerService {
         deny(
           directionForAccessPoint(accessPoint),
           'subject_not_found',
-          'Access subject was not found',
+          'Пользователь не найден',
           accessPoint
+        )
+      );
+    }
+
+    if (
+      verifiedToken.tokenUse === 'display' &&
+      !this.store.isActiveDisplayJti(subject.id, verifiedToken.jti)
+    ) {
+      return record(
+        deny(
+          directionForAccessPoint(accessPoint),
+          'qr_replaced',
+          'QR-код был обновлён и больше не активен',
+          accessPoint,
+          subject
         )
       );
     }
@@ -137,7 +162,7 @@ export class PolicyAccessScannerService implements AccessScannerService {
       return deny(
         directionForAccessPoint(accessPoint),
         error instanceof Error ? error.message : 'invalid_token',
-        'QR token is invalid or expired',
+        'QR-код недействителен или истёк',
         accessPoint
       );
     }
@@ -151,14 +176,14 @@ export class PolicyAccessScannerService implements AccessScannerService {
     const direction = directionForAccessPoint(accessPoint);
 
     if (subject.status !== 'active') {
-      return deny(direction, 'subject_inactive', 'Access profile is not active', accessPoint, subject);
+      return deny(direction, 'subject_inactive', 'Профиль доступа не активен', accessPoint, subject);
     }
 
     if (!subject.allowedAccessPointClasses.includes(accessPoint.class)) {
       return deny(
         direction,
         'access_point_class_not_allowed',
-        'Access point class is not allowed',
+        'Эта точка доступа не разрешена',
         accessPoint,
         subject
       );
@@ -168,27 +193,27 @@ export class PolicyAccessScannerService implements AccessScannerService {
       return deny(
         direction,
         'token_access_point_class_not_allowed',
-        'QR token does not allow this access point class',
+        'QR-код не разрешает эту точку доступа',
         accessPoint,
         subject
       );
     }
 
     if (accessPoint.floorId && !subject.allowedFloorIds.includes(accessPoint.floorId)) {
-      return deny(direction, 'floor_not_allowed', 'This floor is not allowed', accessPoint, subject);
+      return deny(direction, 'floor_not_allowed', 'Этот этаж не разрешён', accessPoint, subject);
     }
 
     if (accessPoint.floorId && !token.floorIds.includes(accessPoint.floorId)) {
       return deny(
         direction,
         'token_floor_not_allowed',
-        'QR token does not allow this floor',
+        'QR-код не разрешает этот этаж',
         accessPoint,
         subject
       );
     }
 
-    return allow(direction, subject.status, 'Access granted', accessPoint, subject);
+    return allow(direction, subject.status, 'Доступ разрешён', accessPoint, subject);
   }
 
   private scanVisitor(token: VerifiedDisplayToken, accessPoint: AccessPoint): ScanResponse {
@@ -196,27 +221,27 @@ export class PolicyAccessScannerService implements AccessScannerService {
     const pass = this.store.findVisitorPassForTokenSubject(token.subject);
 
     if (!pass) {
-      return deny(direction, 'visitor_pass_not_found', 'Visitor pass was not found', accessPoint);
+      return deny(direction, 'visitor_pass_not_found', 'Гостевой пропуск не найден', accessPoint);
     }
 
     const subject = this.store.getSubject(pass.visitorSubjectId);
 
     if (!subject) {
-      return deny(direction, 'visitor_not_found', 'Visitor profile was not found', accessPoint);
+      return deny(direction, 'visitor_not_found', 'Профиль посетителя не найден', accessPoint);
     }
 
     const now = Date.now();
 
     if (pass.status === 'revoked' || pass.status === 'cancelled') {
-      return deny(direction, 'visitor_pass_revoked', 'Visitor pass was revoked', accessPoint, subject);
+      return deny(direction, 'visitor_pass_revoked', 'Гостевой пропуск отозван', accessPoint, subject);
     }
 
     if (pass.status === 'exited') {
-      return deny(direction, 'visitor_pass_closed', 'Visitor pass is already closed', accessPoint, subject);
+      return deny(direction, 'visitor_pass_closed', 'Гостевой пропуск уже закрыт', accessPoint, subject);
     }
 
     if (now < pass.windowStart.getTime() || now > pass.windowEnd.getTime()) {
-      return deny(direction, 'visitor_window_closed', 'Visitor access window is closed', accessPoint, subject);
+      return deny(direction, 'visitor_window_closed', 'Окно доступа посетителя закрыто', accessPoint, subject);
     }
 
     if (pass.status === 'scheduled') {
@@ -224,34 +249,40 @@ export class PolicyAccessScannerService implements AccessScannerService {
         return deny(
           direction,
           'visitor_must_enter_first',
-          'Visitor must enter through the main entrance first',
+          'Посетитель должен сначала войти через главный вход',
           accessPoint,
           subject
         );
       }
 
       this.store.updateVisitorPassStatus(pass.id, 'entered');
-      return allow('enter', 'entered', 'Visitor entered', accessPoint, subject);
+      return allow('enter', 'entered', 'Посетитель вошёл', accessPoint, subject);
     }
 
     if (pass.status === 'entered') {
       if (accessPoint.class === 'EXIT') {
         this.store.updateVisitorPassStatus(pass.id, 'exited');
-        return allow('exit', 'exited', 'Visitor exited', accessPoint, subject);
+        return allow('exit', 'exited', 'Посетитель вышел', accessPoint, subject);
       }
 
       if (accessPoint.floorId && accessPoint.floorId !== pass.floorId) {
-        return deny(direction, 'visitor_floor_not_allowed', 'Visitor floor is not allowed', accessPoint, subject);
+        return deny(direction, 'visitor_floor_not_allowed', 'Этаж посетителя не разрешён', accessPoint, subject);
       }
 
       if (accessPoint.class === 'LIFT' || accessPoint.class === 'STAIR_LANDING') {
-        return allow('move', 'entered', 'Visitor floor access granted', accessPoint, subject);
+        return allow('move', 'entered', 'Доступ посетителя разрешён', accessPoint, subject);
       }
 
-      return deny(direction, 'visitor_exit_required', 'Visitor is already inside', accessPoint, subject);
+      return deny(
+        direction,
+        'visitor_exit_required',
+        'Посетитель уже внутри, доступен только выход',
+        accessPoint,
+        subject
+      );
     }
 
-    return deny(direction, `visitor_pass_${pass.status}`, 'Visitor pass is not active', accessPoint, subject);
+    return deny(direction, `visitor_pass_${pass.status}`, 'Гостевой пропуск не активен', accessPoint, subject);
   }
 }
 
@@ -305,10 +336,13 @@ function deny(
 
 function displaySubject(subject: AccessSubject) {
   return {
+    id: subject.id,
     kind: subject.kind,
     full_name: subject.fullName,
     tenant_name: subject.tenantName,
-    floors: subject.allowedFloorIds
+    floors: subject.allowedFloorIds,
+    photo_file_id: subject.photoFileId,
+    photo_data_url: subject.photoDataUrl
   };
 }
 

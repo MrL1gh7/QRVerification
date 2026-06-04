@@ -3,22 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>QR Scanner</title>
-    <link rel="stylesheet" href="/scanner-app/styles.css" />
+    <title>Сканер QR-доступа</title>
+    <link rel="stylesheet" href="/scanner-app/styles.css?v=20260521-face-verification" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="/scanner-app/app.js" defer></script>
+    <script src="/scanner-app/app.js?v=20260521-face-verification" defer></script>
   </head>
   <body>
     <main class="shell">
       <section class="toolbar">
-        <label for="scannerId">Точка доступа</label>
-        <select id="scannerId">
-          <option value="scn_main_entry">Главный вход</option>
-          <option value="scn_exit">Выход</option>
-          <option value="scn_lift_f2">Лифт, этаж 2</option>
-          <option value="scn_lift_f3">Лифт, этаж 3</option>
-          <option value="scn_stair_f3">Лестница, этаж 3</option>
-        </select>
+        <div>
+          <span>Режим сканирования</span>
+          <strong id="scannerLabel">Вход</strong>
+        </div>
+        <div class="mode-tabs" role="tablist" aria-label="Режим сканирования">
+          <button class="mode-tab" type="button" data-scanner="scn_main_entry">Скан входа</button>
+          <button class="mode-tab" type="button" data-scanner="scn_exit">Скан выхода</button>
+        </div>
       </section>
 
       <section class="camera">
@@ -29,6 +29,19 @@
       <section class="manual">
         <textarea id="manualToken" rows="3" placeholder="tgac:v1:..."></textarea>
         <button id="submitManual" type="button">Проверить</button>
+      </section>
+
+      <section class="face-check hidden" id="faceCheck">
+        <div>
+          <span>Проверка лица</span>
+          <strong id="faceName">...</strong>
+          <p id="faceHint">Сравните человека перед вами с фото регистрации.</p>
+        </div>
+        <img id="facePhoto" alt="Фото пользователя для проверки" />
+        <div class="face-actions">
+          <button id="faceOk" type="button">Лицо совпадает</button>
+          <button id="faceFail" type="button">Не совпадает</button>
+        </div>
       </section>
 
       <section class="result" id="result">

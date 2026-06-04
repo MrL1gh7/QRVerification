@@ -1,186 +1,183 @@
-# Telegram Building Access MVP
+# QR Verification
 
-Production-oriented scaffold for a Telegram bot and backend that manages QR-based building access for one building, five floors, and fifty offices.
+MVP системы контроля доступа в здание через Telegram Web App. Пользователь регистрируется, получает QR-пропуск, охранник сканирует QR на входе или выходе, сверяет лицо с фото регистрации, а система сохраняет решение в журнале.
 
-## Included in this milestone
+Проект рассчитан на демонстрацию: данные хранятся в локальной SQLite-базе, интерфейс полностью на русском, основной сценарий работает прямо в Telegram Web App или в локальном dev-режиме без Telegram.
 
-- Fastify app with `GET /healthz`, `GET /metrics`, `GET /app/qr`, `GET /api/v1/qr/current`, `POST /webhooks/telegram`, and `POST /api/v1/access/scan`
-- grammY webhook-first bot bootstrap with `/start`, `/help`, `/status`, `/my_qr`, `/scan`, and demo role commands
-- Telegram Web App QR screen with short-lived signed QR tokens
-- Telegram Web App scanner screen with camera scanning and manual fallback
-- In-memory MVP access policy engine for demo roles, floor permissions, scanner permissions, replay protection, and visitor pass transitions
-- Prisma schema for core building, tenant, user, visitor-pass, scanner, and audit entities
-- Zod request and response schemas for Telegram webhook and scanner flows
-- Unit, integration, and Playwright test skeletons
-- Project rules in `AGENTS.md`
+## Что реализовано
 
-## Quick start
+- Регистрация с согласием на обработку персональных данных.
+- Обязательное фото лица при регистрации.
+- Одобрение или отклонение заявок администратором.
+- Роли: администратор, админ арендатора, сотрудник, персонал, охранник, посетитель.
+- Вкладки Web App показываются по правам роли.
+- Динамический QR для сотрудников и персонала.
+- Статический гостевой QR: один вход и один выход.
+- Сканер охранника для главного входа и главного выхода.
+- Ручная проверка лица после сканирования QR.
+- Если лицо не совпало, проход фиксируется как отказ `face_mismatch`.
+- Журнал входов, выходов и отказов.
+- Постоянная SQLite-база: данные не сбрасываются после перезапуска.
 
-1. Copy `.env.example` to `.env`.
-2. Put your bot token in `TELEGRAM_BOT_TOKEN`.
-3. Set `PUBLIC_BASE_URL` to your HTTPS URL for Telegram Web Apps and webhooks.
-4. Install dependencies:
+## Требования
 
-```bash
-npm install
-```
+- Node.js 22 или новее.
+- npm.
+- Для полного Telegram-режима: Telegram bot token и HTTPS URL, например через ngrok.
 
-5. Generate the Prisma client:
+Почему Node.js 22: проект использует встроенный модуль `node:sqlite`.
 
-```bash
-npm run prisma:generate
-```
+## Быстрый запуск без Telegram
 
-6. Start PostgreSQL and Redis.
-7. Run the server:
-
-```bash
-npm run dev
-```
-
-The QR placeholder app will be available at `http://localhost:3000/app/qr`.
-The scanner app will be available at `http://localhost:3000/app/scanner`.
-
-You can also boot the local stack with Docker:
-
-```bash
-docker compose -f docker/compose.yml up --build
-```
-
-## Useful scripts
-
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run typecheck
-npm run test
-npm run test:e2e
-```
-
-On this Windows workspace a portable Node.js runtime can live under `.tools/`.
-If global `npm` is not available, run commands through:
+Этот способ нужен, чтобы преподаватель мог скачать репозиторий и сразу посмотреть работу в браузере.
 
 ```powershell
-$env:Path=(Resolve-Path '.tools\node-v22.14.0-win-x64').Path + ';' + $env:Path
-.tools\node-v22.14.0-win-x64\npm.cmd run test
+git clone https://github.com/MrL1gh7/QRVerification.git
+cd QRVerification
+powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1 -Install
 ```
 
-## Telegram demo flow
-
-In Telegram, open the bot and run:
+После запуска откройте:
 
 ```text
-/demo_role operator
-/demo_links
+http://localhost:3000/app/qr?dev_username=Light_epoH
 ```
 
-Use `Visitor QR` or `Employee F3 QR` on one device and `Scanner` on another device. In the scanner, choose:
+`Light_epoH` уже является стартовым администратором. В dev-режиме параметр `dev_username` заменяет авторизацию Telegram Web App, поэтому можно проверять интерфейс локально.
 
-- `Главный вход` for visitor enter
-- `Лифт, этаж 3` for visitor or floor 3 employee movement
-- `Лифт, этаж 2` to see a floor-denied employee case
-- `Выход` for visitor exit
-
-The visitor demo pass can be reset with:
+Полезные локальные ссылки:
 
 ```text
-/demo_reset_visitor
+http://localhost:3000/app/qr?dev_username=Light_epoH
+http://localhost:3000/docs
+http://localhost:3000/healthz
 ```
 
-Access logs are available in Telegram through:
-
-```text
-/audit
-```
-
-Or directly in the browser:
-
-```text
-https://<public-url>/app/audit
-```
-
-## Telegram webhook setup
-
-After `PUBLIC_BASE_URL` points to an HTTPS URL and `.env` contains
-`TELEGRAM_BOT_TOKEN`, run:
-
-```bash
-npm run telegram:configure
-```
-
-This configures bot commands, the QR menu button, and the production webhook
-with `X-Telegram-Bot-Api-Secret-Token`.
-
-To remove the webhook:
-
-```bash
-npm run telegram:delete-webhook
-```
-
-## Demo process control
-
-Start backend and ngrok, update `PUBLIC_BASE_URL`, and optionally configure
-Telegram:
+Если хочется запустить вручную без скрипта:
 
 ```powershell
-.\scripts\start-demo.ps1 -ConfigureTelegram
+Copy-Item .env.example .env
+npm.cmd install
+npm.cmd run dev
 ```
 
-If PowerShell blocks local scripts, run them through a process-level bypass:
+Остановить локальный режим можно клавишами `Ctrl+C` в терминале.
+
+## Полный запуск через Telegram
+
+1. Создайте бота через BotFather и получите `TELEGRAM_BOT_TOKEN`.
+2. Установите ngrok и выполните авторизацию:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1 -ConfigureTelegram
+ngrok config add-authtoken <ваш_ngrok_token>
 ```
 
-Check status:
+3. Создайте `.env`:
 
 ```powershell
-.\scripts\status-demo.ps1
+Copy-Item .env.example .env
 ```
+
+4. Укажите в `.env`:
+
+```text
+TELEGRAM_BOT_TOKEN=<токен_бота>
+TELEGRAM_WEBHOOK_SECRET_TOKEN=<любая_секретная_строка>
+QR_SIGNING_SECRET=<строка_минимум_32_символа>
+```
+
+5. Запустите backend, ngrok и настройку Telegram webhook:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1 -Install -ConfigureTelegram
+```
+
+Скрипт сам:
+
+- установит зависимости, если их нет;
+- соберёт backend;
+- запустит ngrok;
+- подставит HTTPS URL в `.env`;
+- запустит сервер;
+- настроит команды, кнопку меню и webhook бота.
+
+Проверить статус:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\status-demo.ps1
 ```
 
-Stop backend and ngrok:
-
-```powershell
-.\scripts\stop-demo.ps1
-```
+Остановить:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\stop-demo.ps1
 ```
 
-## Suggested next milestone
+## Сценарий показа
 
-- Implement visitor pass creation and binding flows
-- Move the in-memory access store to Prisma/PostgreSQL
-- Move replay protection from memory to Redis
-- Add tenant admin conversations for employee and visitor lifecycle
+1. Открыть Web App от имени `Light_epoH`.
+2. Показать вкладки администратора: QR, профиль, гости, сканер, журнал, пользователи, заявки.
+3. Создать гостевой QR во вкладке `Гости`.
+4. Открыть вкладку `Сканер`.
+5. Выбрать `Скан входа` или `Скан выхода`.
+6. Просканировать QR или вставить токен вручную.
+7. Подтвердить совпадение лица или отметить несовпадение.
+8. Открыть вкладку `Журнал` и показать результат: разрешено или отказано.
 
-## Sample requests
+## Роли
 
-Health check:
+| Роль | Что доступно |
+|---|---|
+| `operator` | Все вкладки, управление пользователями, заявками, журналом и сканером |
+| `tenant_admin` | Личный QR, профиль, создание гостевых QR |
+| `employee` | Личный QR и профиль |
+| `internal_staff` | Личный QR и профиль |
+| `guard` | Профиль и сканер охраны |
+| `visitor` | Проход по гостевому QR |
 
-```bash
-curl http://localhost:3000/healthz
+Стартовый пользователь:
+
+```text
+@Light_epoH
 ```
 
-Scan endpoint:
+## База данных
 
-```bash
-curl -X POST http://localhost:3000/api/v1/access/scan \
-  -H "content-type: application/json" \
-  -d '{
-    "request_id":"req_01",
-    "scanner_id":"scn_main_a",
-    "captured_at":"2026-04-23T10:52:03Z",
-    "token":"tgac:v1:header.payload.signature"
-  }'
+По умолчанию используется:
+
+```text
+data/access.sqlite
 ```
 
-## Current limitation
+Файл создаётся автоматически. В нём хранятся участники, заявки, гостевые пропуска, использованные QR и журнал событий. Файлы базы добавлены в `.gitignore`, чтобы реальные данные не попадали в GitHub.
 
-This repository now has a working in-memory MVP flow. It is enough for Telegram Web App demos and policy testing, but production still needs persistent Prisma/PostgreSQL storage, Redis-backed replay protection, real tenant admin workflows, and HTTPS webhook registration.
+Если нужно начать демо с чистой базой, остановите сервер и удалите файл `data/access.sqlite`.
+
+## Команды разработки
+
+```powershell
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run telegram:configure
+npm run telegram:delete-webhook
+```
+
+## Частые проблемы
+
+Если появляется ошибка про `node:sqlite`, установите Node.js 22 или новее.
+
+Если Web App пишет `Откройте приложение через Telegram`, значит страница открыта без Telegram init data и без dev-параметра. Для локальной проверки используйте:
+
+```text
+http://localhost:3000/app/qr?dev_username=Light_epoH
+```
+
+Если Telegram-режим не запускается, проверьте, что ngrok установлен, авторизован и порт `3000` свободен.
+
+Если PowerShell запрещает запуск скриптов, используйте команды с `-ExecutionPolicy Bypass`, как в примерах выше.
+
+## Production-заметки
+
+SQLite подходит для демонстрации и защиты. Для боевого запуска лучше перенести хранение на PostgreSQL, replay protection на Redis, добавить постоянный HTTPS-хостинг, резервное копирование и формальные правила хранения персональных данных и фотографий.

@@ -9,12 +9,12 @@ if (-not (Test-Path $pidFile)) {
 
 $state = Get-Content $pidFile | ConvertFrom-Json
 
-foreach ($pid in @($state.serverPid, $state.ngrokPid)) {
-  if ($pid) {
-    $process = Get-Process -Id $pid -ErrorAction SilentlyContinue
+foreach ($processId in @($state.serverPid, $state.ngrokPid)) {
+  if ($processId) {
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
     if ($process) {
-      Stop-Process -Id $pid -Force
-      Write-Output "Stopped PID $pid"
+      Stop-Process -Id $processId -Force
+      Write-Output "Stopped PID $processId"
     }
   }
 }

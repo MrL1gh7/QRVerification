@@ -7,7 +7,8 @@ export const currentQrResponseSchema = z.object({
     'tenant_admin',
     'employee',
     'visitor',
-    'internal_staff'
+    'internal_staff',
+    'guard'
   ]),
   step: z.enum(['pending', 'enter', 'exit', 'move', 'expired', 'revoked']),
   expires_at: z.string().nullable(),

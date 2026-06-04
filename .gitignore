@@ -1,9 +1,14 @@
 node_modules/
 dist/
 .env
+.env.local
 .tools/
 .DS_Store
 coverage/
 playwright-report/
 test-results/
 prisma/dev.db
+data/*.sqlite
+data/*.sqlite-*
+tmp/
+presentation-workspace/

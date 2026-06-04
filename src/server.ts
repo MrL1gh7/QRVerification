@@ -13,9 +13,9 @@ async function main() {
   const env = loadEnv();
   const logger = createLogger(env);
   const metrics = createMetrics();
-  const accessStore = new InMemoryAccessStore();
+  const accessStore = new InMemoryAccessStore({ databasePath: env.ACCESS_DB_PATH });
   const qrTokenService = new QrTokenService(env);
-  const bot = createBot(env, accessStore);
+  const bot = createBot(env, accessStore, qrTokenService);
 
   if (bot) {
     await bot.init();
@@ -27,8 +27,13 @@ async function main() {
     processedUpdatesStore: new MemoryProcessedUpdatesStore(),
     currentQrService: new AccessCurrentQrService(accessStore, qrTokenService),
     accessScannerService: new PolicyAccessScannerService(accessStore, qrTokenService),
-    resolveActorSubject: (telegramUserId) =>
-      accessStore.findSubjectByTelegramUserId(telegramUserId),
+    accessStore,
+    qrTokenService,
+    resolveActorSubject: (identity) =>
+      accessStore.findSubjectByTelegramIdentity(
+        identity.telegramUserId,
+        identity.telegramUsername
+      ),
     listAccessEvents: (limit) => accessStore.listAccessEvents(limit),
     telegramUpdateHandler: async (update) => {
       if (!bot) {

@@ -3,61 +3,213 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>QR Access</title>
-    <link rel="stylesheet" href="/qr-app/styles.css" />
+    <title>QR-доступ</title>
+    <link rel="stylesheet" href="/qr-app/styles.css?v=20260521-face-verification" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="/qr-app/app.js" defer></script>
+    <script src="/qr-app/app.js?v=20260521-face-verification" defer></script>
   </head>
   <body>
-    <main class="shell">
-      <section class="identity">
+    <main class="app-shell">
+      <header class="hero">
         <div>
-          <p class="label">Пропуск</p>
-          <h1 id="fullName">Загрузка</h1>
-          <p id="roleLine">Проверяем доступ</p>
+          <p class="eyebrow">Telegram Web App</p>
+          <h1 id="appTitle">QR-доступ</h1>
+          <p id="appSubtitle">Загружаем данные доступа</p>
         </div>
-        <div class="status" id="step">...</div>
+        <button class="ghost-button" id="reloadApp" type="button">Обновить</button>
+      </header>
+
+      <nav class="tabs" id="tabs" aria-label="Функции"></nav>
+
+      <section class="pane" id="pane-register">
+        <div class="card">
+          <p class="eyebrow">Регистрация</p>
+          <h2>Заявка на доступ</h2>
+          <p class="muted">
+            Перед отправкой заявки нужно согласиться на обработку и хранение персональных данных,
+            включая фотографию лица для проверки охраной.
+          </p>
+
+          <label class="consent">
+            <input id="consent" type="checkbox" />
+            <span>
+              Я согласен на обработку и хранение моих персональных данных, имени, фамилии,
+              Telegram-идентификатора и фотографии лица для контроля доступа в здание.
+            </span>
+          </label>
+
+          <label class="field">
+            <span>Имя и фамилия</span>
+            <input id="registrationName" type="text" autocomplete="name" placeholder="Иван Иванов" />
+          </label>
+
+          <div class="field">
+            <span>Запрашиваемая роль</span>
+            <div class="choice-row" id="roleChoices">
+              <button type="button" data-role="employee">Сотрудник</button>
+              <button type="button" data-role="internal_staff">Персонал</button>
+              <button type="button" data-role="guard">Охранник</button>
+              <button type="button" data-role="tenant_admin">Админ арендатора</button>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Фото лица</span>
+            <input id="facePhotoInput" type="file" accept="image/*" capture="user" />
+          </label>
+          <img class="photo-preview hidden" id="facePhotoPreview" alt="Предпросмотр фото лица" />
+
+          <button class="primary-button" id="submitRegistration" type="button">
+            Отправить заявку администратору
+          </button>
+          <p class="message" id="registrationMessage"></p>
+        </div>
       </section>
 
-      <section class="qr-panel" aria-live="polite">
-        <div class="qr-box" id="qrBox">
-          <span>QR</span>
-        </div>
-        <div class="timer">
-          <span>Обновление</span>
-          <strong id="timer">...</strong>
-        </div>
-      </section>
-
-      <section class="details">
-        <div>
-          <span>Компания</span>
-          <strong id="tenantName">...</strong>
-        </div>
-        <div>
-          <span>Этажи</span>
-          <strong id="floors">...</strong>
-        </div>
-        <div>
-          <span>Статус</span>
-          <strong id="status">...</strong>
+      <section class="pane" id="pane-waiting">
+        <div class="card centered">
+          <p class="eyebrow">Заявка отправлена</p>
+          <h2>Ожидает решения администратора</h2>
+          <p id="waitingText" class="muted">
+            После одобрения в приложении появятся доступные вкладки.
+          </p>
         </div>
       </section>
 
-      <section class="demo-switcher" id="demoSwitcher">
-        <label for="demoSubject">Демо-профиль</label>
-        <select id="demoSubject">
-          <option value="">Текущий Telegram-профиль</option>
-          <option value="demo_operator">Оператор</option>
-          <option value="demo_tenant_admin">Администратор арендатора</option>
-          <option value="demo_employee_f3">Сотрудник, этаж 3</option>
-          <option value="demo_employee_f2">Сотрудник, этаж 2</option>
-          <option value="demo_visitor">Посетитель, этаж 3</option>
-          <option value="demo_staff">Внутренний персонал</option>
-        </select>
+      <section class="pane" id="pane-qr">
+        <div class="card qr-card">
+          <div class="split-head">
+            <div>
+              <p class="eyebrow">Мой пропуск</p>
+              <h2 id="qrName">QR-код</h2>
+              <p id="qrRole" class="muted">Проверяем доступ</p>
+            </div>
+            <span class="pill" id="qrStep">...</span>
+          </div>
+
+          <div class="qr-box" id="qrBox">
+            <span>QR</span>
+          </div>
+
+          <div class="details-grid">
+            <div>
+              <span>Действует</span>
+              <strong id="qrTimer">...</strong>
+            </div>
+            <div>
+              <span>Доступ</span>
+              <strong id="qrAccess">...</strong>
+            </div>
+          </div>
+
+          <button class="primary-button" id="refreshQr" type="button">Обновить QR-код</button>
+          <p class="message" id="qrMessage"></p>
+        </div>
       </section>
 
-      <p class="message" id="message"></p>
+      <section class="pane" id="pane-profile">
+        <div class="card">
+          <p class="eyebrow">Профиль</p>
+          <h2 id="profileName">Профиль доступа</h2>
+          <div class="details-list" id="profileDetails"></div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-visitors">
+        <div class="card">
+          <p class="eyebrow">Гости</p>
+          <h2>Статичный гостевой QR</h2>
+          <p class="muted">Гость сможет пройти один раз на вход и один раз на выход.</p>
+          <label class="field">
+            <span>Имя и фамилия гостя</span>
+            <input id="visitorName" type="text" placeholder="Анна Петрова" />
+          </label>
+          <button class="primary-button" id="createVisitorPass" type="button">Создать QR</button>
+          <div class="visitor-result hidden" id="visitorResult">
+            <div class="qr-box small" id="visitorQrBox"></div>
+            <p class="message" id="visitorMessage"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-scanner">
+        <div class="card">
+          <p class="eyebrow">Сканер</p>
+          <h2>Пост охраны</h2>
+          <div class="choice-row" id="scannerModes">
+            <button type="button" data-scanner="scn_main_entry">Скан входа</button>
+            <button type="button" data-scanner="scn_exit">Скан выхода</button>
+          </div>
+
+          <div class="camera">
+            <video id="scannerVideo" muted playsinline></video>
+            <p id="cameraState">Камера ещё не запущена</p>
+          </div>
+
+          <label class="field">
+            <span>Ручная проверка QR</span>
+            <textarea id="manualToken" rows="3" placeholder="tgac:v1:..."></textarea>
+          </label>
+          <button class="primary-button" id="submitManualScan" type="button">Проверить QR</button>
+
+          <div class="face-check hidden" id="faceCheck">
+            <div>
+              <p class="eyebrow">Проверка лица</p>
+              <h3 id="faceName">...</h3>
+              <p id="faceHint" class="muted"></p>
+            </div>
+            <img id="facePhoto" alt="Фото пользователя для сверки" />
+            <div class="choice-row">
+              <button type="button" id="faceOk">Лицо совпадает</button>
+              <button type="button" id="faceFail">Не совпадает</button>
+            </div>
+          </div>
+
+          <div class="result" id="scanResult">
+            <strong id="scanDecision">Готово к сканированию</strong>
+            <span id="scanReason">Поднесите QR к камере или вставьте токен вручную.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-audit">
+        <div class="card">
+          <div class="split-head">
+            <div>
+              <p class="eyebrow">Журнал</p>
+              <h2>Входы и выходы</h2>
+            </div>
+            <button class="ghost-button" id="refreshAudit" type="button">Обновить</button>
+          </div>
+          <div class="list" id="auditList"></div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-users">
+        <div class="card">
+          <div class="split-head">
+            <div>
+              <p class="eyebrow">Администрирование</p>
+              <h2>Пользователи и роли</h2>
+            </div>
+            <button class="ghost-button" id="refreshUsers" type="button">Обновить</button>
+          </div>
+          <div class="list" id="usersList"></div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-requests">
+        <div class="card">
+          <div class="split-head">
+            <div>
+              <p class="eyebrow">Заявки</p>
+              <h2>Ожидают одобрения</h2>
+            </div>
+            <button class="ghost-button" id="refreshRequests" type="button">Обновить</button>
+          </div>
+          <div class="list" id="requestsList"></div>
+        </div>
+      </section>
     </main>
   </body>
 </html>

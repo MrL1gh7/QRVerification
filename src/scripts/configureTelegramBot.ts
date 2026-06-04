@@ -16,42 +16,13 @@ const webhookUrl = new URL('/webhooks/telegram', env.PUBLIC_BASE_URL).toString()
 const qrAppUrl = new URL('/app/qr', env.PUBLIC_BASE_URL).toString();
 
 await callTelegramApi('setMyCommands', {
-  commands: [
-    {
-      command: 'start',
-      description: 'Start QR access bot'
-    },
-    {
-      command: 'my_qr',
-      description: 'Open dynamic QR'
-    },
-    {
-      command: 'scan',
-      description: 'Open QR scanner'
-    },
-    {
-      command: 'audit',
-      description: 'Open access logs'
-    },
-    {
-      command: 'status',
-      description: 'Show current access role'
-    },
-    {
-      command: 'demo_role',
-      description: 'Link demo role'
-    },
-    {
-      command: 'demo_links',
-      description: 'Open demo QR and scanner links'
-    }
-  ]
+  commands: []
 });
 
 await callTelegramApi('setChatMenuButton', {
   menu_button: {
     type: 'web_app',
-    text: 'QR',
+    text: 'QR-доступ',
     web_app: {
       url: qrAppUrl
     }
@@ -61,7 +32,7 @@ await callTelegramApi('setChatMenuButton', {
 await callTelegramApi('setWebhook', {
   url: webhookUrl,
   secret_token: env.TELEGRAM_WEBHOOK_SECRET_TOKEN,
-  allowed_updates: ['message', 'callback_query']
+  allowed_updates: ['message']
 });
 
 console.log(

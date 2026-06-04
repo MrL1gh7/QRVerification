@@ -15,10 +15,13 @@ export const scanResponseSchema = z.object({
   display_message: z.string(),
   subject: z
     .object({
+      id: z.string().optional(),
       kind: z.string(),
       full_name: z.string(),
       tenant_name: z.string(),
-      floors: z.array(z.string())
+      floors: z.array(z.string()),
+      photo_file_id: z.string().optional(),
+      photo_data_url: z.string().optional()
     })
     .optional(),
   access_point: z

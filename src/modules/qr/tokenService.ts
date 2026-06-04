@@ -16,10 +16,21 @@ export interface DisplayTokenInput {
   step: AccessStep;
 }
 
+export interface StaticVisitorPassTokenInput {
+  visitorPassId: string;
+  buildingId: string;
+  floorIds: string[];
+  accessPointClasses: AccessPointClass[];
+  expiresAt: Date;
+}
+
+export type QrTokenUse = 'display' | 'static_visitor';
+
 export interface VerifiedDisplayToken {
   subject: string;
   jti: string;
   subjectKind: SubjectKind;
+  tokenUse: QrTokenUse;
   buildingId: string;
   floorIds: string[];
   accessPointClasses: AccessPointClass[];
@@ -43,6 +54,7 @@ export class QrTokenService {
 
     const token = await new SignJWT({
       typ: input.subjectKind,
+      tk: 'display',
       bid: input.buildingId,
       fl: input.floorIds,
       ap: input.accessPointClasses,
@@ -55,6 +67,44 @@ export class QrTokenService {
       .setIssuer('uk-building-access')
       .setAudience('access-scanner')
       .setSubject(input.subject)
+      .setJti(jti)
+      .setIssuedAt(issuedAt)
+      .setNotBefore(issuedAt)
+      .setExpirationTime(expiresAt)
+      .sign(this.secret);
+
+    return {
+      token: `${QR_TOKEN_PREFIX}${token}`,
+      expiresAt: new Date(expiresAt * 1_000),
+      expiresAtEpochSeconds: expiresAt,
+      jti
+    };
+  }
+
+  async issueStaticVisitorPassToken(input: StaticVisitorPassTokenInput) {
+    const issuedAt = Math.floor(Date.now() / 1_000);
+    const expiresAt = Math.floor(input.expiresAt.getTime() / 1_000);
+    const jti = randomUUID();
+
+    if (expiresAt <= issuedAt) {
+      throw new Error('static_visitor_token_expired');
+    }
+
+    const token = await new SignJWT({
+      typ: 'visitor',
+      tk: 'static_visitor',
+      bid: input.buildingId,
+      fl: input.floorIds,
+      ap: input.accessPointClasses,
+      st: 'enter'
+    })
+      .setProtectedHeader({
+        alg: 'HS256',
+        typ: 'JWT'
+      })
+      .setIssuer('uk-building-access')
+      .setAudience('access-scanner')
+      .setSubject(`visitor_pass:${input.visitorPassId}`)
       .setJti(jti)
       .setIssuedAt(issuedAt)
       .setNotBefore(issuedAt)
@@ -102,6 +152,7 @@ function parseClaims(payload: JWTPayload): VerifiedDisplayToken {
     subject: payload.sub,
     jti: payload.jti,
     subjectKind: payload.typ as SubjectKind,
+    tokenUse: payload.tk === 'static_visitor' ? 'static_visitor' : 'display',
     buildingId: payload.bid,
     floorIds: payload.fl.filter((item): item is string => typeof item === 'string'),
     accessPointClasses: payload.ap.filter(

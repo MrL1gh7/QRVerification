@@ -9,7 +9,7 @@ export interface CurrentQrService {
 
 export interface CurrentQrRequest {
   telegramUserId?: string;
-  requestedSubjectId?: string;
+  telegramUsername?: string;
 }
 
 export class ScaffoldCurrentQrService implements CurrentQrService {
@@ -20,15 +20,15 @@ export class ScaffoldCurrentQrService implements CurrentQrService {
       expires_at: null,
       refresh_after_ms: null,
       display: {
-        full_name: 'Access profile pending',
-        job_title: 'Scaffold mode',
-        tenant_name: 'Not bound',
+        full_name: 'Профиль доступа не настроен',
+        job_title: 'Режим заготовки',
+        tenant_name: 'Не привязан',
         floors: [],
         status: 'pending',
         can_scan: false
       },
       qr_token: null,
-      message: 'QR issuance will be added in the next milestone'
+      message: 'Выдача QR будет настроена на следующем этапе'
     };
   }
 }
@@ -40,11 +40,10 @@ export class AccessCurrentQrService implements CurrentQrService {
   ) {}
 
   async getCurrent(input: CurrentQrRequest = {}): Promise<CurrentQrResponse> {
-    const actor = input.telegramUserId
-      ? this.store.findSubjectByTelegramUserId(input.telegramUserId)
-      : undefined;
-
-    const subject = this.resolveSubject(input, actor);
+    const subject = this.store.findSubjectByTelegramIdentity(
+      input.telegramUserId,
+      input.telegramUsername
+    );
 
     if (!subject) {
       return {
@@ -53,20 +52,20 @@ export class AccessCurrentQrService implements CurrentQrService {
         expires_at: null,
         refresh_after_ms: null,
         display: {
-          full_name: 'No Telegram account linked',
-          job_title: 'Run /demo_role operator',
-          tenant_name: 'Demo access',
+          full_name: 'Доступ не настроен',
+          job_title: 'Пользователь не найден в списке',
+          tenant_name: 'Доступ в здание',
           floors: [],
           status: 'unlinked',
           can_scan: false
         },
         qr_token: null,
-        message: 'Telegram account is not linked to an access profile yet'
+        message: 'Ваш Telegram username пока не добавлен в список доступа'
       };
     }
 
     if (subject.status !== 'active') {
-      return responseWithoutToken(subject, 'revoked', 'Access profile is not active');
+      return responseWithoutToken(subject, 'revoked', 'Профиль доступа не активен');
     }
 
     if (subject.kind === 'visitor') {
@@ -76,44 +75,34 @@ export class AccessCurrentQrService implements CurrentQrService {
     return this.issueSubjectToken(subject, subject.kind === 'operator' ? 'move' : 'enter');
   }
 
-  private resolveSubject(input: CurrentQrRequest, actor?: AccessSubject) {
-    if (input.requestedSubjectId) {
-      if (!actor || actor.canScan || actor.id === input.requestedSubjectId) {
-        return this.store.getSubject(input.requestedSubjectId);
-      }
-    }
-
-    return actor;
-  }
-
   private async issueVisitorToken(subject: AccessSubject): Promise<CurrentQrResponse> {
     if (!subject.visitorPassId) {
-      return responseWithoutToken(subject, 'revoked', 'Visitor pass is missing');
+      return responseWithoutToken(subject, 'revoked', 'Гостевой пропуск не найден');
     }
 
     const pass = this.store.getVisitorPass(subject.visitorPassId);
 
     if (!pass) {
-      return responseWithoutToken(subject, 'revoked', 'Visitor pass was not found');
+      return responseWithoutToken(subject, 'revoked', 'Гостевой пропуск не найден');
     }
 
     const now = Date.now();
 
     if (pass.status === 'revoked' || pass.status === 'cancelled') {
-      return responseWithoutToken(subject, 'revoked', 'Visitor pass was revoked');
+      return responseWithoutToken(subject, 'revoked', 'Гостевой пропуск отозван');
     }
 
     if (pass.status === 'exited') {
-      return responseWithoutToken(subject, 'expired', 'Visitor pass is already closed');
+      return responseWithoutToken(subject, 'expired', 'Гостевой пропуск уже закрыт');
     }
 
     if (now < pass.windowStart.getTime()) {
-      return responseWithoutToken(subject, 'pending', 'Visitor window has not started yet');
+      return responseWithoutToken(subject, 'pending', 'Окно визита ещё не началось');
     }
 
     if (now > pass.windowEnd.getTime()) {
       this.store.updateVisitorPassStatus(pass.id, 'expired');
-      return responseWithoutToken(subject, 'expired', 'Visitor window has expired');
+      return responseWithoutToken(subject, 'expired', 'Окно визита истекло');
     }
 
     const step: AccessStep = pass.status === 'scheduled' ? 'enter' : 'exit';
@@ -128,13 +117,15 @@ export class AccessCurrentQrService implements CurrentQrService {
       subject:
         subject.kind === 'visitor' && subject.visitorPassId
           ? `visitor_pass:${subject.visitorPassId}`
-          : `user:${subject.id}`,
+          : `qr_session:${subject.id}`,
       subjectKind: subject.kind,
       buildingId: subject.buildingId,
       floorIds: subject.allowedFloorIds,
       accessPointClasses: subject.allowedAccessPointClasses,
       step
     });
+
+    this.store.setActiveDisplayJti(subject.id, issued.jti);
 
     return {
       mode: subject.kind,
@@ -143,7 +134,7 @@ export class AccessCurrentQrService implements CurrentQrService {
       refresh_after_ms: 30_000,
       display: buildDisplay(subject),
       qr_token: issued.token,
-      message: 'QR token issued'
+      message: 'QR-код выпущен'
     };
   }
 }
@@ -169,7 +160,9 @@ function buildDisplay(subject: AccessSubject) {
     full_name: subject.fullName,
     job_title: subject.jobTitle,
     tenant_name: subject.tenantName,
-    floors: subject.allowedFloorIds.map((floorId) => floorId.replace('f', 'Floor ')),
+    floors: subject.allowedFloorIds.length
+      ? subject.allowedFloorIds.map((floorId) => `Этаж ${floorId.replace('f', '')}`)
+      : ['Главный вход и выход'],
     status: subject.status,
     can_scan: subject.canScan
   };

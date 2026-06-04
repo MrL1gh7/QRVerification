@@ -11,8 +11,14 @@ declare module 'qrcode' {
     options?: QRCodeToStringOptions
   ): Promise<string>;
 
+  export function toBuffer(
+    text: string,
+    options?: Omit<QRCodeToStringOptions, 'type'>
+  ): Promise<Buffer>;
+
   const QRCode: {
     toString: typeof toString;
+    toBuffer: typeof toBuffer;
   };
 
   export default QRCode;

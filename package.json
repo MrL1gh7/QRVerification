@@ -5,10 +5,12 @@
   "type": "module",
   "description": "MVP Telegram bot and backend for QR-based building access control.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "demo:local": "powershell -ExecutionPolicy Bypass -File ./scripts/start-local.ps1",
+    "demo:telegram": "powershell -ExecutionPolicy Bypass -File ./scripts/start-demo.ps1 -ConfigureTelegram",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint .",

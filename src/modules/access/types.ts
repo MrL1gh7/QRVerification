@@ -3,9 +3,11 @@ export type SubjectKind =
   | 'tenant_admin'
   | 'employee'
   | 'visitor'
-  | 'internal_staff';
+  | 'internal_staff'
+  | 'guard';
 
 export type SubjectStatus = 'active' | 'disabled' | 'revoked';
+export type RegistrationRequestStatus = 'pending' | 'approved' | 'rejected';
 
 export type AccessPointClass = 'MAIN_ENTRY' | 'LIFT' | 'STAIR_LANDING' | 'EXIT';
 
@@ -33,6 +35,10 @@ export interface AccessSubject {
   allowedAccessPointClasses: AccessPointClass[];
   canScan: boolean;
   visitorPassId?: string;
+  telegramUsername?: string;
+  photoFileId?: string;
+  photoDataUrl?: string;
+  registeredAt?: Date;
 }
 
 export interface AccessPoint {
@@ -59,12 +65,33 @@ export interface VisitorPass {
   windowStart: Date;
   windowEnd: Date;
   status: VisitorPassStatus;
+  visitorUsername?: string;
+  visitorFullName?: string;
+  createdBySubjectId?: string;
+  createdAt?: Date;
 }
 
 export interface TelegramLink {
   telegramUserId: string;
+  username?: string;
   subjectId: string;
   linkedAt: Date;
+}
+
+export interface RegistrationRequest {
+  id: string;
+  telegramUserId: string;
+  username?: string;
+  fullName: string;
+  requestedRole: Exclude<SubjectKind, 'operator' | 'visitor'>;
+  consentAccepted: boolean;
+  photoDataUrl: string;
+  status: RegistrationRequestStatus;
+  createdAt: Date;
+  reviewedAt?: Date;
+  reviewedBySubjectId?: string;
+  rejectionReason?: string;
+  subjectId?: string;
 }
 
 export interface AccessEventLogEntry {

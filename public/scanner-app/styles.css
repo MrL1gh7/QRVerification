@@ -36,6 +36,7 @@ body {
 
 .toolbar,
 .manual,
+.face-check,
 .result {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -50,23 +51,36 @@ body {
   padding: 0.85rem 1rem;
 }
 
-label {
+.toolbar span {
+  display: block;
+  margin-bottom: 0.2rem;
   color: var(--muted);
+  font-size: 0.85rem;
 }
 
-select,
 textarea,
 button {
   font: inherit;
 }
 
-select {
-  max-width: 14rem;
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.mode-tab {
+  min-height: 2.4rem;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--ink);
-  padding: 0.45rem 0.55rem;
+  background: #f7fafb;
+  color: var(--accent);
+  padding: 0 0.75rem;
+}
+
+.mode-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }
 
 .camera {
@@ -99,6 +113,51 @@ video {
   display: grid;
   gap: 0.65rem;
   padding: 0.85rem;
+}
+
+.face-check {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.face-check.hidden {
+  display: none;
+}
+
+.face-check span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+}
+
+.face-check p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+
+.face-check img {
+  width: 9rem;
+  height: 9rem;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4f7f8;
+}
+
+.face-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+#faceOk {
+  background: var(--allow);
+}
+
+#faceFail {
+  background: var(--deny);
 }
 
 textarea {
